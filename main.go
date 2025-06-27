@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -19,36 +18,51 @@ type command struct {
 	args []string
 }
 
+type commands map[string]func(*state, command) error
+
+func (c *commands) run(s *state, cmd command) error {
+	return (*c)[cmd.name](s, cmd)
+}
+
+func (c *commands) register(name string, f func(s *state, cmd command) error) {
+	(*c)[name] = f
+}
+
 var st *state
 
 func main() {
 	st = &state{}
 	var err error
+	commands := commands{}
+
+	commands.register("login", handlerLogin)
+
 	(*st).config, err = config.Read()
 	if err != nil {
 		fmt.Println("Error reading the config file:", err)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	input := cleanInput(scanner.Text())
+	if len(os.Args) <= 1 {
+		fmt.Println("not enough arguments")
+		os.Exit(1)
+	}
+	input := os.Args[1:]
 
-	switch input[0] {
-	case "login":
-		err = handlerLogin(st, command{
-			name: "login",
+	if _, ok := commands[input[0]]; ok {
+		err = commands.run(st, command{
+			name: input[0],
 			args: input,
 		})
 
 		if err != nil {
 			fmt.Println(err)
+			os.Exit(1)
 		}
-		break
 	}
 }
 
 func handlerLogin(s *state, cmd command) error {
-	if len(cmd.args) == 0 {
+	if len(cmd.args) <= 1 {
 		return errors.New("no username provided")
 	}
 
@@ -62,9 +76,8 @@ func handlerLogin(s *state, cmd command) error {
 	return nil
 }
 
-func cleanInput(text string) []string {
+func cleanCommandInput(text string) string {
 	trimmed := strings.TrimSpace(text)
 	lowered := strings.ToLower(trimmed)
-	words := strings.Fields(lowered)
-	return words
+	return lowered
 }
