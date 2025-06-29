@@ -67,6 +67,7 @@ func main() {
 	commands.register("reset", handlerReset)
 	commands.register("users", handlerListUsers)
 	commands.register("agg", handlerAgg)
+	commands.register("addfeed", handlerAddFeed)
 
 	(*st).cfg, err = config.Read()
 	if err != nil {
@@ -194,6 +195,36 @@ func handlerAgg(_ *state, _ command) error {
 
 	(*rssFeed).Channel.Title = html.UnescapeString((*rssFeed).Channel.Title)
 	fmt.Println((*rssFeed))
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) <= 2 {
+		return errors.New("Not enough arguments, expected: <name> <url>")
+	}
+
+	name := cmd.args[1]
+	url := cmd.args[2]
+
+	user, err := (*s).db.GetUser(context.Background(), (*s).cfg.CurrentUserName)
+	if err != nil {
+		return nil
+	}
+
+	feed, err := (*s).db.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      name,
+		Url:       url,
+		UserID:    user.ID,
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(feed)
+
 	return nil
 }
 
