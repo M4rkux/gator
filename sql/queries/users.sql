@@ -9,4 +9,4 @@ values(
 RETURNING *;
 
 -- name: GetUser :one
-SELECT * FROM users WHERE ID = $1;
+SELECT * FROM users WHERE name = $1;

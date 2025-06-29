@@ -1,17 +1,23 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/m4rkux/gator/internal/config"
+	"github.com/m4rkux/gator/internal/database"
 )
 
 type state struct {
-	config config.Config
+	db  *database.Queries
+	cfg config.Config
 }
 
 type command struct {
@@ -37,11 +43,20 @@ func main() {
 	commands := commands{}
 
 	commands.register("login", handlerLogin)
+	commands.register("register", handlerRegister)
 
-	(*st).config, err = config.Read()
+	(*st).cfg, err = config.Read()
 	if err != nil {
 		fmt.Println("Error reading the config file:", err)
 	}
+
+	db, err := sql.Open("postgres", (*st).cfg.DbUrl)
+	if err != nil {
+		fmt.Println("Error connectin to database")
+		os.Exit(1)
+	}
+
+	(*st).db = database.New(db)
 
 	if len(os.Args) <= 1 {
 		fmt.Println("not enough arguments")
@@ -68,12 +83,50 @@ func handlerLogin(s *state, cmd command) error {
 	}
 
 	username := cmd.args[1]
-	err := config.SetUser(username, s.config)
+
+	_, err := (*s).db.GetUser(context.Background(), username)
 	if err != nil {
-		fmt.Println("Error setting the current user:", err)
+		return errors.New("User not found")
+	}
+
+	err = config.SetUser(username, s.cfg)
+	if err != nil {
+		return err
 	}
 
 	fmt.Printf("the %s user has been set.\n", username)
+	return nil
+}
+
+func handlerRegister(s *state, cmd command) error {
+	if len(cmd.args) <= 1 {
+		return errors.New("no user provided")
+	}
+
+	username := cmd.args[1]
+
+	_, err := (*s).db.GetUser(context.Background(), username)
+	if err == nil {
+		return errors.New("User already created")
+	}
+
+	user, err := (*s).db.CreateUser(context.Background(), database.CreateUserParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      username,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = config.SetUser(username, s.cfg)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(user)
+
 	return nil
 }
 
