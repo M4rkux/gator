@@ -68,6 +68,7 @@ func main() {
 	commands.register("users", handlerListUsers)
 	commands.register("agg", handlerAgg)
 	commands.register("addfeed", handlerAddFeed)
+	commands.register("feeds", handlerFeeds)
 
 	(*st).cfg, err = config.Read()
 	if err != nil {
@@ -224,6 +225,20 @@ func handlerAddFeed(s *state, cmd command) error {
 	}
 
 	fmt.Println(feed)
+
+	return nil
+}
+
+func handlerFeeds(s *state, cmd command) error {
+
+	feeds, err := (*s).db.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Println(" * ", feed.Name, feed.Url, feed.Username)
+	}
 
 	return nil
 }
