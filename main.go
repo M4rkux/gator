@@ -44,6 +44,7 @@ func main() {
 
 	commands.register("login", handlerLogin)
 	commands.register("register", handlerRegister)
+	commands.register("reset", handlerReset)
 
 	(*st).cfg, err = config.Read()
 	if err != nil {
@@ -64,9 +65,11 @@ func main() {
 	}
 	input := os.Args[1:]
 
-	if _, ok := commands[input[0]]; ok {
+	cmdName := cleanCommandInput(input[0])
+
+	if _, ok := commands[cmdName]; ok {
 		err = commands.run(st, command{
-			name: input[0],
+			name: cmdName,
 			args: input,
 		})
 
@@ -127,6 +130,17 @@ func handlerRegister(s *state, cmd command) error {
 
 	fmt.Println(user)
 
+	return nil
+}
+
+func handlerReset(s *state, cmd command) error {
+	fmt.Println("Reseting database..")
+	err := (*s).db.DeleteAllUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("All users were deleted")
 	return nil
 }
 
