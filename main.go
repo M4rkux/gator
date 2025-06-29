@@ -77,7 +77,7 @@ func main() {
 
 	db, err := sql.Open("postgres", (*st).cfg.DbUrl)
 	if err != nil {
-		fmt.Println("Error connectin to database")
+		fmt.Println("Error connecting to database")
 		os.Exit(1)
 	}
 
