@@ -71,6 +71,7 @@ func main() {
 	commands.register("feeds", handlerFeeds)
 	commands.register("follow", middlewareLoggedIn(handlerFollow))
 	commands.register("following", middlewareLoggedIn(handlerFollowing))
+	commands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 
 	(*st).cfg, err = config.Read()
 	if err != nil {
@@ -305,6 +306,29 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	for _, feedFollow := range feedFollows {
 		fmt.Println("*", feedFollow.FeedName)
 	}
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) < 2 {
+		return errors.New("missing required parameter <feedURL>")
+	}
+
+	feedURL := cmd.args[1]
+
+	feed, err := s.db.GetFeedByURL(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	err = s.db.DeleteFeedFollowForUser(context.Background(), database.DeleteFeedFollowForUserParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
